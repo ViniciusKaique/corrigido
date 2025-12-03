@@ -14,7 +14,9 @@
 
 int	ft_exit(t_shell *shell, t_cmd *cmd)
 {
-	ft_printf("exit\n");
+	// "exit" impresso no stdout ao sair é o comportamento padrao do bash interativo
+	ft_putendl_fd("exit", 1); 
+
 	if (!cmd->args[1])
 	{
 		shell->running = 0;
@@ -22,17 +24,17 @@ int	ft_exit(t_shell *shell, t_cmd *cmd)
 	}
 	if (cmd->args[1][0] == '\0' || !ft_str_is_numeric(cmd->args[1]))
 	{
-		if (cmd->args[1][0] == '\0')
-			ft_printf("exit: : numeric argument required\n");
-		else
-			ft_printf("exit: %s: numeric argument required\n", cmd->args[1]);
+		ft_putstr_fd("minishell: exit: ", 2);
+		ft_putstr_fd(cmd->args[1], 2);
+		ft_putstr_fd(": numeric argument required\n", 2);
+		
 		shell->running = 0;
 		shell->last_exit_status = 2;
 		return (2);
 	}
 	if (cmd->args[2])
 	{
-		ft_printf("exit: too many arguments\n");
+		ft_putstr_fd("minishell: exit: too many arguments\n", 2);
 		shell->last_exit_status = 1;
 		return (1);
 	}
@@ -49,15 +51,23 @@ int	ft_exit_pipe(t_shell *data, t_cmd *cmd)
 	if (cmd->args && cmd->args[1])
 	{
 		if (!ft_str_is_numeric(cmd->args[1]))
+		{
+			// Erro no pipe tambem deve ir para stderr se necessário, 
+			// mas geralmente bash nao imprime "exit" dentro do pipe.
+			// O erro numerico porem, deve aparecer.
+			ft_putstr_fd("minishell: exit: ", 2);
+			ft_putstr_fd(cmd->args[1], 2);
+			ft_putstr_fd(": numeric argument required\n", 2);
 			code = 2;
+		}
+		else if (cmd->args[2])
+		{
+			ft_putstr_fd("minishell: exit: too many arguments\n", 2);
+			code = 1;
+		}
 		else
 			code = ft_atoi(cmd->args[1]) % 256;
 	}
-	else
-		code = 0;
-	// [FIX] Removidos free() manuais (free_args, free_redirs, free(cmd->cmd)).
-	// Como usamos um Garbage Collector, basta chamar free_shell para limpar tudo.
-	// O free manual causava "Invalid free" porque esses ponteiros sao gerenciados.
 	free_shell(data);
 	exit(code);
 }

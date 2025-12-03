@@ -12,13 +12,13 @@
 
 #include "minishell.h"
 
-
 static int	prepare_commands(t_shell *data, t_token **tokens, t_cmd **cmd_list)
 {
 	*tokens = lexer(data, data->input);
 	if (!*tokens)
 		return (0);
-	if (expand_tokens(data, *tokens) != 0)
+	// [FIX] Passar endereco da lista de tokens para permitir remocao de nos
+	if (expand_tokens(data, tokens) != 0)
 		return (0);
 	*cmd_list = parser(data, *tokens);
 	if (!*cmd_list || handle_heredocs(data, *cmd_list) != 0)
@@ -54,24 +54,24 @@ static void	minishell_loop(t_shell *data)
 	}
 }
 
-static	void	init_signals(void)
+static void	init_signals(void)
 {
 	signal(SIGINT, handle_sigint);
 	signal(SIGQUIT, SIG_IGN);
 }
 
-void    init_child_signals(void)
+void	init_child_signals(void)
 {
-    signal(SIGINT, SIG_DFL);
-    signal(SIGQUIT, SIG_DFL);
+	signal(SIGINT, SIG_DFL);
+	signal(SIGQUIT, SIG_DFL);
 }
-void    child_sigquit_handler(int sig)
+void	child_sigquit_handler(int sig)
 {
-    (void)sig;
-    write(2, "Quit (core dumped)\n", 19);
+	(void)sig;
+	write(2, "Quit (core dumped)\n", 19);
 }
 
-static void clean_inherited_fds(void)
+static void	clean_inherited_fds(void)
 {
 	int	fd;
 
@@ -85,12 +85,11 @@ static void clean_inherited_fds(void)
 
 int	main(int argc, char **argv, char **envp)
 {
-	t_shell	*data;
-	int		exit_code;
+	t_shell *data;
+	int exit_code;
 
 	(void)argv;
 	(void)argc;
-	// [FIX] Limpa FDs herdados (VS Code, logs, etc) antes de iniciar
 	clean_inherited_fds();
 	init_signals();
 	data = ft_calloc(1, sizeof(t_shell));
