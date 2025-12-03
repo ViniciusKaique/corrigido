@@ -1,0 +1,107 @@
+/* ************************************************************************** */
+/*                                                                            */
+/*                                                        :::      ::::::::   */
+/*   parser.c                                           :+:      :+:    :+:   */
+/*                                                    +:+ +:+         +:+     */
+/*   By: tkenji-u <tkenji-u@student.42.fr>          +#+  +:+       +#+        */
+/*                                                +#+#+#+#+#+   +#+           */
+/*   Created: 2025/11/11 15:53:38 by tkenji-u          #+#    #+#             */
+/*   Updated: 2025/12/03 18:49:52 by tkenji-u         ###   ########.fr       */
+/*                                                                            */
+/* ************************************************************************** */
+
+#include <minishell.h>
+
+static int	process_token_type(t_shell *data, t_cmd *cmd, t_token *token)
+{
+	if (token->type >= REDIR_IN && token->type <= REDIR_DELIMITER)
+	{
+		if (!token->next || token->next->type != WORD)
+			return (-1);
+		if (add_redir_to_cmd(data, cmd, token, token->next) != 0)
+			return (-1);
+		return (2);
+	}
+	else if (token->type == WORD)
+	{
+		if (add_arg_to_cmd(data, cmd, token->value) != 0)
+			return (-1);
+		return (1);
+	}
+	return (1);
+}
+
+static t_cmd	*init_parser_head(t_shell *data,
+t_token *list, t_cmd **current_cmd)
+{
+	t_cmd	*head;
+
+	if (list && list->type == PIPE)
+	{
+		ft_putstr_fd("minishell: syntax error near unexpected token `|'\n", 2);
+		return (NULL);
+	}
+	head = garbage_calloc(data, sizeof(t_cmd));
+	if (!head)
+		return (NULL);
+	*current_cmd = head;
+	return (head);
+}
+
+static int	handle_assignment_or_pipe(t_shell *data, t_cmd **current_cmd,
+				t_token **current_token)
+{
+	if (is_assignment_token((*current_token)->value)
+		&& (*current_cmd)->args == NULL)
+	{
+		set_variable_in_env(data, (*current_token)->value);
+		*current_token = (*current_token)->next;
+		return (1);
+	}
+	if ((*current_token)->type == PIPE)
+	{
+		if (handle_pipe(data, current_cmd, *current_token) != 0)
+			return (-1);
+		*current_token = (*current_token)->next;
+		return (1);
+	}
+	return (0);
+}
+
+static t_cmd	*parse_tokens_loop(t_shell *data,
+	t_token *current_token, t_cmd *current_cmd)
+{
+	int	ret;
+	int	advance;
+
+	while (current_token)
+	{
+		ret = handle_assignment_or_pipe(data, &current_cmd, &current_token);
+		if (ret == -1)
+			return (NULL);
+		if (ret == 1)
+			continue ;
+		advance = process_token_type(data, current_cmd, current_token);
+		if (advance == -1)
+		{
+			ft_putstr_fd("mminishell: syntax error near unexpected token\n", 2);
+			return (NULL);
+		}
+		while (advance-- > 0 && current_token)
+			current_token = current_token->next;
+	}
+	return (current_cmd);
+}
+
+t_cmd	*parser(t_shell *data, t_token *token_list)
+{
+	t_cmd	*cmd_list;
+	t_cmd	*current_cmd;
+
+	cmd_list = init_parser_head(data, token_list, &current_cmd);
+	if (!cmd_list)
+		return (NULL);
+	if (!parse_tokens_loop(data, token_list, current_cmd))
+		return (NULL);
+	return (cmd_list);
+}
