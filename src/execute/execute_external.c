@@ -79,10 +79,13 @@ void	execute_child_process(t_shell *data, t_cmd *cmd)
 	signal(SIGINT, SIG_DFL);
 	signal(SIGQUIT, SIG_DFL);
 	if (apply_redirections(cmd))
+	{
+		// [FIX] Limpar memória antes de sair em caso de erro no redirecionamento
+		free_shell(data);
 		exit(1);
+	}
 	handle_fds(cmd);
-	// [FIX] Se args for NULL (caso $EMPTY), sai com sucesso (0)
-	if (!cmd->args || !cmd->args[0])
+	if (!cmd->args[0])
 	{
 		free_shell(data);
 		exit(0);
